@@ -1,0 +1,13 @@
+{
+  "status": "completed",
+  "analysis_time": 21.9,
+  "max_displacement": 0.625,
+  "max_stress": 252.76,
+  "safety_factor": 2.81,
+  "von_mises_stress": 84.42,
+  "principal_stress_1": 151.32,
+  "principal_stress_3": -42.68,
+  "total_deformation": 0.549,
+  "is_mock_data": true,
+  "timestamp": "2026-03-31T12:47:32.107210"
+}

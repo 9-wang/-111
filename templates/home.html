@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 建筑结构受力分析{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom:16px; font-size:22px;">欢迎使用结构受力分析系统</h2>
+    <p style="margin-bottom:20px; color:#555;">本系统可快速完成桁架建模、受力计算、结果可视化与3D模型预览，适用于建筑、桥梁、机械结构分析。</p>
+
+    <div class="grid">
+        <div class="card" style="border:1px solid #eee;">
+            <h3 style="margin-bottom:10px;"><i class="fa fa-cube"></i> 参数化建模</h3>
+            <p style="margin-bottom:16px; color:#666;">快速生成标准桁架模型，支持自定义尺寸、材质、荷载</p>
+            <a class="btn" href="/parametric_modeling">立即创建</a>
+        </div>
+
+        <div class="card" style="border:1px solid #eee;">
+            <h3 style="margin-bottom:10px;"><i class="fa fa-list"></i> 模型管理</h3>
+            <p style="margin-bottom:16px; color:#666;">查看、编辑、删除已生成的结构模型</p>
+            <a class="btn" href="/model_list">模型列表</a>
+        </div>
+
+        <div class="card" style="border:1px solid #eee;">
+            <h3 style="margin-bottom:10px;"><i class="fa fa-line-chart"></i> 受力分析</h3>
+            <p style="margin-bottom:16px; color:#666;">自动计算轴力、弯矩、位移，生成分析报告</p>
+            <a class="btn" href="/analysis">开始分析</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

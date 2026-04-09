@@ -1,0 +1,18 @@
+{
+  "analysis_id": "7215fd44-d5f6-4808-ac22-1d6d4b86750f",
+  "user_id": 1,
+  "model_id": 1,
+  "status": "completed",
+  "started_at": "2026-03-31T12:47:32.056786",
+  "completed_at": "2026-03-31T12:47:32.056794",
+  "results": {
+    "status": "completed",
+    "analysis_time": 22.0,
+    "max_temperature": 99.5,
+    "min_temperature": 45.93,
+    "temperature_gradient": 39.01,
+    "thermal_stress": 149.29,
+    "is_mock_data": true,
+    "timestamp": "2026-03-31T12:47:32.054554"
+  }
+}

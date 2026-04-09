@@ -1,0 +1,575 @@
+{% extends "base.html" %}
+
+{% block title %}参数化建模 - 建筑结构受力分析{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom:16px; font-size:22px;">参数化建模</h2>
+    <p style="margin-bottom:20px; color:#555;">通过参数化设置生成标准桁架模型，支持实时预览</p>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap:30px;">
+        <!-- 左侧参数设置 -->
+        <div>
+            <form method="POST" action="/parametric_modeling">
+                <div class="form-item">
+                    <label>模型名称</label>
+                    <input type="text" name="model_name" required placeholder="请输入模型名称">
+                </div>
+
+                <div class="form-item">
+                    <label>桁架类型</label>
+                    <select name="truss_type" id="truss_type" required>
+                        <option value="triangle">三角形桁架</option>
+                        <option value="trapezoid">梯形桁架</option>
+                        <option value="parallel">平行弦桁架</option>
+                        <option value="warren">斜拉桁架</option>
+                        <option value="howe">豪式桁架</option>
+                        <option value="pratt">普拉特桁架</option>
+                    </select>
+                </div>
+
+                <div class="form-item">
+                    <label>跨度 (m)</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="range" id="span_range" min="1" max="30" step="0.5" value="10">
+                        <input type="number" id="span" name="span" value="10" min="1" step="0.5">
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label>高度 (m)</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="range" id="height_range" min="0.5" max="10" step="0.5" value="3">
+                        <input type="number" id="height" name="height" value="3" min="0.5" step="0.5">
+                    </div>
+                </div>
+
+                <div class="form-item" id="top_span_group">
+                    <label>顶部跨度 (m)</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="range" id="top_span_range" min="0.5" max="25" step="0.5" value="8">
+                        <input type="number" id="top_span" name="top_span" value="8" min="0.5" step="0.5">
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label>节点间距 (m)</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <input type="range" id="node_spacing_range" min="0.5" max="5" step="0.5" value="1">
+                        <input type="number" id="node_spacing" name="node_spacing" value="1" min="0.5" step="0.5">
+                    </div>
+                </div>
+
+                <div class="form-item">
+                    <label>截面类型</label>
+                    <select name="section_type" id="section_type">
+                        <option value="HN100*50">HN100*50</option>
+                        <option value="HN125*60">HN125*60</option>
+                        <option value="HN150*75">HN150*75</option>
+                        <option value="HN175*90">HN175*90</option>
+                        <option value="HN200*100">HN200*100</option>
+                    </select>
+                </div>
+
+                <div class="form-item">
+                    <label>边界条件</label>
+                    <select name="boundary_condition" id="boundary_condition">
+                        <option value="simply_supported">简支约束</option>
+                        <option value="fixed">固定约束</option>
+                    </select>
+                </div>
+
+                <div style="margin-top:20px;">
+                    <button type="submit" class="btn">生成模型</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 右侧实时预览 -->
+        <div>
+            <h3 style="margin-bottom:16px;">实时预览</h3>
+            <div id="preview-container" style="width:100%; height:400px; background:#f0f0f0; border-radius:8px; position:relative; overflow:hidden;">
+                <canvas id="truss-preview" style="width:100%; height:100%;"></canvas>
+                <div id="preview-info" style="position:absolute; bottom:10px; left:10px; background:rgba(255,255,255,0.8); padding:8px; border-radius:4px; font-size:12px;">
+                    <div>桁架类型: <span id="preview-truss-type">三角形</span></div>
+                    <div>跨度: <span id="preview-span">10</span> m</div>
+                    <div>高度: <span id="preview-height">3</span> m</div>
+                    <div id="preview-top-span">顶部跨度: <span>8</span> m</div>
+                    <div>节点间距: <span id="preview-node-spacing">1</span> m</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if model_id %}
+    <div class="mt-8 bg-blue-50 p-6 rounded-lg">
+        <h3 class="text-xl font-bold text-blue-800 mb-4">模型已保存</h3>
+        <p class="mb-2">模型ID: <span class="font-medium text-blue-600">{{ model_id }}</span></p>
+        <p class="mb-4">模型名称: <span class="font-medium">{{ model_name }}</span></p>
+        
+        <div class="flex justify-center">
+            <a href="/view_3d_model/{{ model_id }}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded mr-4">
+                预览3D模型
+            </a>
+            <form action="/analyze" method="post" class="inline">
+                <input type="hidden" name="model_id" value="{{ model_id }}">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded">
+                    进行受力分析
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // DOM元素
+    const elements = {
+        trussType: document.getElementById('truss_type'),
+        spanRange: document.getElementById('span_range'),
+        span: document.getElementById('span'),
+        heightRange: document.getElementById('height_range'),
+        height: document.getElementById('height'),
+        topSpanRange: document.getElementById('top_span_range'),
+        topSpan: document.getElementById('top_span'),
+        nodeSpacingRange: document.getElementById('node_spacing_range'),
+        nodeSpacing: document.getElementById('node_spacing'),
+        topSpanGroup: document.getElementById('top_span_group'),
+        previewTopSpan: document.getElementById('preview-top-span'),
+        previewTrussType: document.getElementById('preview-truss-type'),
+        previewSpan: document.getElementById('preview-span'),
+        previewHeight: document.getElementById('preview-height'),
+        previewNodeSpacing: document.getElementById('preview-node-spacing'),
+        canvas: document.getElementById('truss-preview')
+    };
+
+    // 初始化
+    function init() {
+        setupEventListeners();
+        updateTopSpanVisibility();
+        updatePreviewInfo();
+        drawTruss();
+    }
+
+    // 设置事件监听器
+    function setupEventListeners() {
+        elements.trussType.addEventListener('change', function() {
+            updateTopSpanVisibility();
+            updatePreviewInfo();
+            drawTruss();
+        });
+
+        elements.spanRange.addEventListener('input', function() {
+            elements.span.value = this.value;
+            updatePreviewInfo();
+            drawTruss();
+        });
+
+        elements.span.addEventListener('change', function() {
+            elements.spanRange.value = this.value;
+            updatePreviewInfo();
+            drawTruss();
+        });
+
+        elements.heightRange.addEventListener('input', function() {
+            elements.height.value = this.value;
+            updatePreviewInfo();
+            drawTruss();
+        });
+
+        elements.height.addEventListener('change', function() {
+            elements.heightRange.value = this.value;
+            updatePreviewInfo();
+            drawTruss();
+        });
+
+        elements.topSpanRange.addEventListener('input', function() {
+            elements.topSpan.value = this.value;
+            updatePreviewInfo();
+            drawTruss();
+        });
+
+        elements.topSpan.addEventListener('change', function() {
+            elements.topSpanRange.value = this.value;
+            updatePreviewInfo();
+            drawTruss();
+        });
+
+        elements.nodeSpacingRange.addEventListener('input', function() {
+            elements.nodeSpacing.value = this.value;
+            updatePreviewInfo();
+            drawTruss();
+        });
+
+        elements.nodeSpacing.addEventListener('change', function() {
+            elements.nodeSpacingRange.value = this.value;
+            updatePreviewInfo();
+            drawTruss();
+        });
+    }
+
+    // 更新顶部跨度选项的可见性
+    function updateTopSpanVisibility() {
+        const trussType = elements.trussType.value;
+        if (trussType === 'trapezoid') {
+            elements.topSpanGroup.style.display = 'block';
+            elements.previewTopSpan.style.display = 'block';
+        } else {
+            elements.topSpanGroup.style.display = 'none';
+            elements.previewTopSpan.style.display = 'none';
+        }
+    }
+
+    // 更新预览信息
+    function updatePreviewInfo() {
+        elements.previewTrussType.textContent = getTrussTypeName();
+        elements.previewSpan.textContent = elements.span.value;
+        elements.previewHeight.textContent = elements.height.value;
+        if (elements.trussType.value === 'trapezoid') {
+            elements.previewTopSpan.querySelector('span').textContent = elements.topSpan.value;
+        }
+        elements.previewNodeSpacing.textContent = elements.nodeSpacing.value;
+    }
+
+    // 获取桁架类型中文名称
+    function getTrussTypeName() {
+        const type = elements.trussType.value;
+        const typeNames = {
+            'triangle': '三角形',
+            'trapezoid': '梯形',
+            'parallel': '平行弦',
+            'warren': '斜拉',
+            'howe': '豪式',
+            'pratt': '普拉特'
+        };
+        return typeNames[type] || type;
+    }
+
+    // 绘制桁架
+    function drawTruss() {
+        const canvas = elements.canvas;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width = canvas.offsetWidth;
+        const height = canvas.height = canvas.offsetHeight;
+        
+        // 清除画布
+        ctx.clearRect(0, 0, width, height);
+        
+        // 获取参数
+        const trussType = elements.trussType.value;
+        const span = parseFloat(elements.span.value);
+        const trussHeight = parseFloat(elements.height.value);
+        const nodeSpacing = parseFloat(elements.nodeSpacing.value);
+        const topSpan = trussType === 'trapezoid' ? parseFloat(elements.topSpan.value) : 0;
+        
+        // 计算缩放比例
+        const scale = Math.min(width / (span + 2), height / (trussHeight + 2));
+        const offsetX = (width - span * scale) / 2;
+        const offsetY = (height - trussHeight * scale) / 2 + trussHeight * scale;
+        
+        // 绘制桁架
+        switch(trussType) {
+            case 'triangle':
+                drawTriangleTruss(ctx, span, trussHeight, nodeSpacing, scale, offsetX, offsetY);
+                break;
+            case 'trapezoid':
+                drawTrapezoidTruss(ctx, span, trussHeight, topSpan, nodeSpacing, scale, offsetX, offsetY);
+                break;
+            case 'parallel':
+                drawParallelTruss(ctx, span, trussHeight, nodeSpacing, scale, offsetX, offsetY);
+                break;
+            case 'warren':
+                drawWarrenTruss(ctx, span, trussHeight, nodeSpacing, scale, offsetX, offsetY);
+                break;
+            case 'howe':
+                drawHoweTruss(ctx, span, trussHeight, nodeSpacing, scale, offsetX, offsetY);
+                break;
+            case 'pratt':
+                drawPrattTruss(ctx, span, trussHeight, nodeSpacing, scale, offsetX, offsetY);
+                break;
+        }
+    }
+
+    // 绘制三角形桁架
+    function drawTriangleTruss(ctx, span, height, spacing, scale, offsetX, offsetY) {
+        const nodeCount = Math.max(3, Math.floor(span / spacing) + 1);
+        const nodes = [];
+        
+        // 创建节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            const y = i === 0 || i === nodeCount - 1 ? 0 : height;
+            nodes.push({x, y});
+        }
+        
+        // 绘制杆件
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        
+        // 下弦
+        for (let i = 0; i < nodeCount - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 上弦和腹杆
+        for (let i = 1; i < nodeCount - 1; i++) {
+            drawLine(ctx, nodes[0], nodes[i], scale, offsetX, offsetY);
+            drawLine(ctx, nodes[i], nodes[nodeCount - 1], scale, offsetX, offsetY);
+        }
+        
+        // 绘制节点
+        drawNodes(ctx, nodes, scale, offsetX, offsetY);
+    }
+
+    // 绘制梯形桁架
+    function drawTrapezoidTruss(ctx, span, height, topSpan, spacing, scale, offsetX, offsetY) {
+        const nodeCount = Math.max(3, Math.floor(span / spacing) + 1);
+        const topNodeCount = Math.max(2, Math.floor(topSpan / spacing) + 1);
+        const nodes = [];
+        
+        // 下弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: 0});
+        }
+        
+        // 上弦节点
+        const topOffset = (span - topSpan) / 2;
+        for (let i = 0; i < topNodeCount; i++) {
+            const x = topOffset + i * (topSpan / (topNodeCount - 1));
+            nodes.push({x, y: height});
+        }
+        
+        // 绘制杆件
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        
+        // 下弦
+        for (let i = 0; i < nodeCount - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 上弦
+        for (let i = nodeCount; i < nodes.length - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 腹杆
+        for (let i = 0; i < nodeCount; i++) {
+            const topIndex = Math.min(nodeCount + Math.floor(i * (topNodeCount - 1) / (nodeCount - 1)), nodes.length - 1);
+            drawLine(ctx, nodes[i], nodes[topIndex], scale, offsetX, offsetY);
+        }
+        
+        // 绘制节点
+        drawNodes(ctx, nodes, scale, offsetX, offsetY);
+    }
+
+    // 绘制平行弦桁架
+    function drawParallelTruss(ctx, span, height, spacing, scale, offsetX, offsetY) {
+        const nodeCount = Math.max(2, Math.floor(span / spacing) + 1);
+        const nodes = [];
+        
+        // 下弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: 0});
+        }
+        
+        // 上弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: height});
+        }
+        
+        // 绘制杆件
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        
+        // 下弦
+        for (let i = 0; i < nodeCount - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 上弦
+        for (let i = nodeCount; i < nodes.length - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 腹杆
+        for (let i = 0; i < nodeCount; i++) {
+            drawLine(ctx, nodes[i], nodes[i + nodeCount], scale, offsetX, offsetY);
+        }
+        
+        // 绘制节点
+        drawNodes(ctx, nodes, scale, offsetX, offsetY);
+    }
+
+    // 绘制斜拉桁架
+    function drawWarrenTruss(ctx, span, height, spacing, scale, offsetX, offsetY) {
+        const nodeCount = Math.max(2, Math.floor(span / spacing) + 1);
+        const nodes = [];
+        
+        // 下弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: 0});
+        }
+        
+        // 上弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: height});
+        }
+        
+        // 绘制杆件
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        
+        // 下弦
+        for (let i = 0; i < nodeCount - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 上弦
+        for (let i = nodeCount; i < nodes.length - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 腹杆（斜拉）
+        for (let i = 0; i < nodeCount - 1; i++) {
+            if (i % 2 === 0) {
+                drawLine(ctx, nodes[i], nodes[i + nodeCount + 1], scale, offsetX, offsetY);
+            } else {
+                drawLine(ctx, nodes[i], nodes[i + nodeCount - 1], scale, offsetX, offsetY);
+            }
+        }
+        
+        // 绘制节点
+        drawNodes(ctx, nodes, scale, offsetX, offsetY);
+    }
+
+    // 绘制豪式桁架
+    function drawHoweTruss(ctx, span, height, spacing, scale, offsetX, offsetY) {
+        const nodeCount = Math.max(2, Math.floor(span / spacing) + 1);
+        const nodes = [];
+        
+        // 下弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: 0});
+        }
+        
+        // 上弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: height});
+        }
+        
+        // 绘制杆件
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        
+        // 下弦
+        for (let i = 0; i < nodeCount - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 上弦
+        for (let i = nodeCount; i < nodes.length - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 腹杆（豪式）
+        for (let i = 0; i < nodeCount; i++) {
+            drawLine(ctx, nodes[i], nodes[i + nodeCount], scale, offsetX, offsetY);
+        }
+        
+        // 斜腹杆
+        for (let i = 0; i < nodeCount - 2; i++) {
+            drawLine(ctx, nodes[i], nodes[i + nodeCount + 2], scale, offsetX, offsetY);
+        }
+        
+        // 绘制节点
+        drawNodes(ctx, nodes, scale, offsetX, offsetY);
+    }
+
+    // 绘制普拉特桁架
+    function drawPrattTruss(ctx, span, height, spacing, scale, offsetX, offsetY) {
+        const nodeCount = Math.max(2, Math.floor(span / spacing) + 1);
+        const nodes = [];
+        
+        // 下弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: 0});
+        }
+        
+        // 上弦节点
+        for (let i = 0; i < nodeCount; i++) {
+            const x = i * (span / (nodeCount - 1));
+            nodes.push({x, y: height});
+        }
+        
+        // 绘制杆件
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 2;
+        
+        // 下弦
+        for (let i = 0; i < nodeCount - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 上弦
+        for (let i = nodeCount; i < nodes.length - 1; i++) {
+            drawLine(ctx, nodes[i], nodes[i + 1], scale, offsetX, offsetY);
+        }
+        
+        // 腹杆（普拉特）
+        for (let i = 0; i < nodeCount; i++) {
+            drawLine(ctx, nodes[i], nodes[i + nodeCount], scale, offsetX, offsetY);
+        }
+        
+        // 斜腹杆
+        for (let i = 1; i < nodeCount - 1; i++) {
+            if (i % 2 === 1) {
+                drawLine(ctx, nodes[i], nodes[i + nodeCount - 1], scale, offsetX, offsetY);
+                drawLine(ctx, nodes[i], nodes[i + nodeCount + 1], scale, offsetX, offsetY);
+            }
+        }
+        
+        // 绘制节点
+        drawNodes(ctx, nodes, scale, offsetX, offsetY);
+    }
+
+    // 绘制线段
+    function drawLine(ctx, start, end, scale, offsetX, offsetY) {
+        ctx.beginPath();
+        ctx.moveTo(start.x * scale + offsetX, offsetY - start.y * scale);
+        ctx.lineTo(end.x * scale + offsetX, offsetY - end.y * scale);
+        ctx.stroke();
+    }
+
+    // 绘制节点
+    function drawNodes(ctx, nodes, scale, offsetX, offsetY) {
+        ctx.fillStyle = '#3182ce';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        
+        nodes.forEach(node => {
+            const x = node.x * scale + offsetX;
+            const y = offsetY - node.y * scale;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        });
+    }
+
+    // 初始化
+    init();
+</script>
+{% endblock %}

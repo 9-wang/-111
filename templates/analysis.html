@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}受力分析 - 建筑结构受力分析{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom:16px; font-size:22px;">受力分析</h2>
+    <p style="margin-bottom:20px; color:#555;">对结构模型进行受力分析，计算应力、位移等参数</p>
+
+    <form method="POST" action="/run_analysis">
+        <div class="form-item">
+            <label>选择模型</label>
+            <select name="model_id" required>
+                <option value="">-- 请选择一个模型 --</option>
+                {% for model in user_models %}
+                <option value="{{ model['id'] }}">{{ model['model_name'] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px; margin-top:20px;">
+            <div class="form-item">
+                <label>弹性模量 (MPa)</label>
+                <input type="number" name="elastic_modulus" value="210000.0" min="0" step="0.1">
+            </div>
+            <div class="form-item">
+                <label>泊松比</label>
+                <input type="number" name="poisson_ratio" value="0.3" min="0" max="0.5" step="0.01">
+            </div>
+            <div class="form-item">
+                <label>密度 (kg/m³)</label>
+                <input type="number" name="density" value="7850.0" min="0" step="0.1">
+            </div>
+            <div class="form-item">
+                <label>网格尺寸</label>
+                <input type="number" name="mesh_size" value="10.0" min="0.1" step="0.1">
+            </div>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button type="submit" class="btn">开始分析</button>
+        </div>
+    </form>
+
+    {% if analyses %}
+    <div style="margin-top:40px;">
+        <h3 style="margin-bottom:16px; font-size:18px;">分析历史</h3>
+        <div class="grid">
+            {% for analysis in analyses %}
+            <div class="card" style="border:1px solid #eee;">
+                <h4 style="margin-bottom:8px;">{{ analysis.model_name }}</h4>
+                <p style="margin-bottom:12px; color:#666;">分析ID: {{ analysis.analysis_id }}</p>
+                <div style="display:flex; gap:10px;">
+                    <a class="btn" href="/view_analysis/{{ analysis.analysis_id }}">查看结果</a>
+                    <a class="btn" href="/delete_analysis/{{ analysis.analysis_id }}" onclick="return confirm('确定要删除这个分析记录吗？');">删除</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{
+  "analysis_id": "8f0c27a5-629e-41b8-ae8f-ffedfbf5a0b5",
+  "user_id": 1,
+  "model_id": 1,
+  "status": "completed",
+  "started_at": "2026-03-31T12:47:32.048861",
+  "completed_at": "2026-03-31T12:47:32.048867",
+  "results": {
+    "status": "completed",
+    "analysis_time": 21.8,
+    "max_displacement": 0.249,
+    "max_stress": 219.19,
+    "safety_factor": 1.72,
+    "von_mises_stress": 124.05,
+    "principal_stress_1": 209.1,
+    "principal_stress_3": -20.08,
+    "total_deformation": 0.358,
+    "is_mock_data": true,
+    "timestamp": "2026-03-31T12:47:32.047594"
+  }
+}

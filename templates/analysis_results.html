@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}受力分析结果 - {{ model_name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 24px;">
+    <h1 style="font-size: 24px; font-weight: bold; margin-bottom: 24px;">受力分析结果</h1>
+    
+    <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
+        <div style="padding: 16px 24px; border-bottom: 1px solid #e2e8f0;">
+            <h2 style="font-size: 20px; font-weight: 600;">模型: {{ model_name }}</h2>
+        </div>
+        
+        <div style="padding: 24px;">
+            <!-- 关键参数和分析结果 -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <div style="background: #f7fafc; padding: 16px; border-radius: 8px;">
+                    <h3 style="font-weight: 600; margin-bottom: 12px;">关键参数</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>跨度:</span> <span>{{ results.span }} m</span>
+                        </li>
+                        <li style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>高度:</span> <span>{{ results.height }} m</span>
+                        </li>
+                        <li style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>节点间距:</span> <span>{{ results.node_spacing }} m</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div style="background: #f7fafc; padding: 16px; border-radius: 8px;">
+                    <h3 style="font-weight: 600; margin-bottom: 12px;">分析结果</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>最大应力:</span> 
+                            <span style="font-weight: bold; color: #dc2626;">{{ (results.max_stress / 1e6)|round(2) }} MPa</span>
+                        </li>
+                        <li style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>最大位移:</span> 
+                            <span style="font-weight: bold; color: #2563eb;">{{ results.max_displacement|round(4) }} m</span>
+                        </li>
+                        <li style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span>安全系数:</span> 
+                            <span style="font-weight: bold; {% if results.safety_factor > 2 %}color: #16a34a;{% else %}color: #ca8a04;{% endif %}">
+                                {{ results.safety_factor|round(2) }}
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- 结构可视化 -->
+            <div style="margin-top: 32px;">
+                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px;">结构可视化</h3>
+                <div id="plot-container" style="width: 100%; height: 500px; background: #fafafa; border-radius: 8px;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 24px; text-align: center;">
+        <a href="/parametric_modeling" style="display: inline-block; background: #2563eb; color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none; margin-right: 12px;">
+            创建新模型
+        </a>
+        <a href="/model_list" style="display: inline-block; background: #4b5563; color: white; padding: 8px 20px; border-radius: 6px; text-decoration: none;">
+            查看所有模型
+        </a>
+    </div>
+</div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<script>
+    (function() {
+        // 从后端获取节点和单元数据
+        const nodesData = {{ results.nodes|tojson|safe }};
+        const elementsData = {{ results.elements|tojson|safe }};
+        
+        if (!nodesData || nodesData.length === 0) {
+            document.getElementById('plot-container').innerHTML = '<div style="text-align:center; padding:50px;">暂无节点数据</div>';
+            return;
+        }
+        
+        // 提取坐标
+        const x = nodesData.map(n => n[0]);
+        const y = nodesData.map(n => n[1]);
+        const z = nodesData.map(n => n[2] || 0);
+        
+        // 构建线段数据
+        const lines_x = [], lines_y = [], lines_z = [];
+        if (elementsData && elementsData.length > 0) {
+            elementsData.forEach(elem => {
+                const n1 = nodesData[elem[0]];
+                const n2 = nodesData[elem[1]];
+                if (n1 && n2) {
+                    lines_x.push(n1[0], n2[0], null);
+                    lines_y.push(n1[1], n2[1], null);
+                    lines_z.push((n1[2] || 0), (n2[2] || 0), null);
+                }
+            });
+        } else {
+            // 如果没有 elements 数据，尝试自动连接（相邻节点）
+            for (let i = 0; i < nodesData.length - 1; i++) {
+                lines_x.push(nodesData[i][0], nodesData[i+1][0], null);
+                lines_y.push(nodesData[i][1], nodesData[i+1][1], null);
+                lines_z.push((nodesData[i][2] || 0), (nodesData[i+1][2] || 0), null);
+            }
+        }
+        
+        const traces = [
+            {
+                type: 'scatter3d',
+                x: x, y: y, z: z,
+                mode: 'markers',
+                marker: { size: 5, color: 'blue' },
+                name: '节点'
+            },
+            {
+                type: 'scatter3d',
+                x: lines_x, y: lines_y, z: lines_z,
+                mode: 'lines',
+                line: { color: 'black', width: 2 },
+                name: '杆件'
+            }
+        ];
+        
+        const layout = {
+            title: '桁架结构受力分析',
+            scene: {
+                xaxis: { title: 'X (m)' },
+                yaxis: { title: 'Y (m)' },
+                zaxis: { title: 'Z (m)' }
+            },
+            margin: { l: 0, r: 0, b: 0, t: 40 }
+        };
+        
+        Plotly.newPlot('plot-container', traces, layout);
+    })();
+</script>
+{% endblock %}

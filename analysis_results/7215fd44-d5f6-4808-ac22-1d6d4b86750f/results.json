@@ -1,0 +1,10 @@
+{
+  "status": "completed",
+  "analysis_time": 22.0,
+  "max_temperature": 99.5,
+  "min_temperature": 45.93,
+  "temperature_gradient": 39.01,
+  "thermal_stress": 149.29,
+  "is_mock_data": true,
+  "timestamp": "2026-03-31T12:47:32.054554"
+}

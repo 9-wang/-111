@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}模型列表 - 建筑结构受力分析{% endblock %}
+
+{% block content %}
+<style>
+    .status-badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .status-completed {
+        background: #c6f6d5;
+        color: #22543d;
+    }
+    .status-running {
+        background: #feebc8;
+        color: #7b341e;
+    }
+    .status-failed {
+        background: #fed7d7;
+        color: #9b2c2c;
+    }
+    .status-pending {
+        background: #edf2f7;
+        color: #4a5568;
+    }
+    .model-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.2s;
+    }
+    .model-card:hover {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+</style>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 style="font-size: 22px; margin-bottom: 6px;">模型列表</h2>
+            <p style="color: #666; font-size: 14px;">查看和管理已创建的结构模型</p>
+        </div>
+        <a href="/parametric_modeling" class="btn" style="background: #2c5282;">
+            <i class="fa fa-plus"></i> 创建新模型
+        </a>
+    </div>
+
+    {% if models %}
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;">
+        {% for model in models %}
+        <div class="model-card">
+            <div style="padding: 20px; flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <h3 style="font-size: 18px; font-weight: 600; color: #2d3748; word-break: break-word;">{{ model.model_name }}</h3>
+                    {% set status = model.analysis_status|default('pending') %}
+                    <span class="status-badge status-{{ status }}">{{ status|capitalize }}</span>
+                </div>
+                <p style="font-size: 14px; color: #4a5568; margin-bottom: 16px; line-height: 1.5;">
+                    {{ model.model_description|default('无描述')|truncate(80) }}
+                </p>
+                <div style="font-size: 13px; color: #718096; border-top: 1px solid #edf2f7; padding-top: 12px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span>桁架类型</span>
+                        <span style="font-weight: 500;">
+                            {% if model.parameters is mapping and model.parameters.truss_type %}
+                                {% set type_map = {'triangle':'三角形','trapezoid':'梯形','parallel':'平行弦','warren':'斜拉','howe':'豪式','pratt':'普拉特'} %}
+                                {{ type_map.get(model.parameters.truss_type, model.parameters.truss_type) }}
+                            {% else %}未知{% endif %}
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span>跨度</span>
+                        <span style="font-weight: 500;">{{ model.parameters.get('span', '?') if model.parameters is mapping else '?' }} m</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                        <span>高度</span>
+                        <span style="font-weight: 500;">{{ model.parameters.get('height', '?') if model.parameters is mapping else '?' }} m</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>创建时间</span>
+                        <span>{{ model.created_at[:10] if model.created_at else '未知' }}</span>
+                    </div>
+                </div>
+            </div>
+            <div style="border-top: 1px solid #edf2f7; background: #fafafa; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <a href="/view_3d_model/{{ model.id }}" style="color: #3182ce; text-decoration: none; font-size: 14px; font-weight: 500;">
+                    查看详情 <i class="fa fa-arrow-right" style="font-size: 12px;"></i>
+                </a>
+                <form action="/delete_model/{{ model.id }}" method="POST" onsubmit="return confirm('确定要删除模型「{{ model.model_name }}」吗？此操作不可恢复。');" style="margin: 0;">
+                    <button type="submit" style="background: none; border: none; color: #e53e3e; cursor: pointer; font-size: 14px; font-weight: 500;">
+                        <i class="fa fa-trash"></i> 删除
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if pagination and pagination.pages > 1 %}
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 32px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+        <div style="font-size: 14px; color: #4a5568;">
+            第 {{ pagination.page }} / {{ pagination.pages }} 页，共 {{ pagination.total }} 条记录
+        </div>
+        <div style="display: flex; gap: 8px;">
+            {% if pagination.page > 1 %}
+            <a href="{{ url_for('model_list', page=pagination.page-1) }}" class="btn" style="background: #edf2f7; color: #2d3748; border: 1px solid #cbd5e0;">上一页</a>
+            {% endif %}
+            {% if pagination.page < pagination.pages %}
+            <a href="{{ url_for('model_list', page=pagination.page+1) }}" class="btn" style="background: #edf2f7; color: #2d3748; border: 1px solid #cbd5e0;">下一页</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="text-align: center; padding: 60px 20px; background: #f7fafc; border-radius: 12px; border: 1px dashed #cbd5e0;">
+        <i class="fa fa-cubes" style="font-size: 48px; color: #a0aec0;"></i>
+        <h3 style="font-size: 20px; margin: 16px 0 8px; color: #2d3748;">暂无模型</h3>
+        <p style="color: #718096; margin-bottom: 24px;">您还没有创建任何结构模型，请先创建模型。</p>
+        <a href="/parametric_modeling" class="btn" style="background: #3182ce;">立即创建</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

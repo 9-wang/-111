@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}3D模型查看 - 建筑结构受力分析{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+    <h1 style="font-size: 24px; margin-bottom: 20px;">3D模型查看器</h1>
+    
+    <!-- 控制面板 -->
+    <div style="background: #f0f0f0; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+        <label style="margin-right: 20px;">
+            <input type="checkbox" id="show-displacement" checked> 显示位移
+        </label>
+        <label>
+            <input type="checkbox" id="show-stress" checked> 显示应力分布
+        </label>
+    </div>
+    
+    <!-- 可视化容器：强制高度，不使用 Tailwind -->
+    <div id="plot-container" style="width: 100%; height: 500px; background: #fafafa; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></div>
+    
+    <!-- 分析结果卡片 -->
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 24px;">
+        <div style="flex: 1; min-width: 150px; background: #e6f2ff; padding: 16px; border-radius: 8px;">
+            <h3 style="font-weight: bold;">最大位移</h3>
+            <p id="max-displacement" style="font-size: 24px; color: #1e40af;">0.000 m</p>
+        </div>
+        <div style="flex: 1; min-width: 150px; background: #fee2e2; padding: 16px; border-radius: 8px;">
+            <h3 style="font-weight: bold;">最大应力</h3>
+            <p id="max-stress" style="font-size: 24px; color: #b91c1c;">0.000 MPa</p>
+        </div>
+        <div style="flex: 1; min-width: 150px; background: #e0f2fe; padding: 16px; border-radius: 8px;">
+            <h3 style="font-weight: bold;">安全系数</h3>
+            <p id="safety-factor" style="font-size: 24px; color: #0f766e;">1.50</p>
+        </div>
+    </div>
+    
+    <div style="margin-top: 24px;">
+        <a href="/model_list" style="color: #2563eb;">← 返回模型列表</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.bootcdn.net/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+<script>
+    // 加载模型数据
+    async function loadModelData() {
+        const container = document.getElementById('plot-container');
+        try {
+            // 从模板变量中获取模型 ID（后端必须传入 model 对象）
+            const modelId = {{ model.id }};
+            const response = await fetch(`/api/model/${modelId}.json`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const data = await response.json();
+            
+            // 更新分析结果（注意单位转换：应力从 Pa 转 MPa）
+            document.getElementById('max-displacement').textContent = (data.max_displacement || 0).toFixed(3) + ' m';
+            document.getElementById('max-stress').textContent = ((data.max_stress || 0) / 1e6).toFixed(2) + ' MPa';
+            document.getElementById('safety-factor').textContent = (data.safety_factor || 1.50).toFixed(2);
+            
+            // 渲染 3D 图
+            createPlotlyVisualization(data);
+        } catch (error) {
+            console.error('加载模型数据失败:', error);
+            container.innerHTML = '<div style="text-align:center; padding:50px;">模型数据加载失败，请检查 API 接口</div>';
+        }
+    }
+    
+    function createPlotlyVisualization(data) {
+        const nodes = data.nodes || [];
+        const elements = data.elements || [];
+        
+        // 空数据兜底
+        if (nodes.length === 0 || elements.length === 0) {
+            Plotly.newPlot('plot-container', [], {
+                title: '暂无模型数据',
+                annotations: [{ text: '请先创建并分析模型', showarrow: false, font: { size: 20 } }]
+            });
+            return;
+        }
+        
+        // 构建线条坐标
+        const xLines = [], yLines = [], zLines = [];
+        elements.forEach(elem => {
+            const n1 = nodes[elem[0]];
+            const n2 = nodes[elem[1]];
+            if (n1 && n2) {
+                xLines.push(n1[0], n2[0], null);
+                yLines.push(n1[1], n2[1], null);
+                zLines.push((n1[2] || 0), (n2[2] || 0), null);
+            }
+        });
+        
+        const traces = [{
+            type: 'scatter3d',
+            x: xLines, y: yLines, z: zLines,
+            mode: 'lines',
+            line: { color: 'black', width: 3 },
+            name: '桁架结构'
+        }];
+        
+        // 节点
+        traces.push({
+            type: 'scatter3d',
+            x: nodes.map(n => n[0]),
+            y: nodes.map(n => n[1]),
+            z: nodes.map(n => n[2] || 0),
+            mode: 'markers',
+            marker: { size: 4, color: 'blue' },
+            name: '节点'
+        });
+        
+        // 位移（如果存在）
+        if (data.displacements && data.displacements.length === nodes.length) {
+            const dispX = nodes.map((n, i) => n[0] + (data.displacements[i]?.[0] || 0));
+            const dispY = nodes.map((n, i) => n[1] + (data.displacements[i]?.[1] || 0));
+            const dispZ = nodes.map((n, i) => (n[2] || 0) + (data.displacements[i]?.[2] || 0));
+            traces.push({
+                type: 'scatter3d',
+                x: dispX, y: dispY, z: dispZ,
+                mode: 'markers',
+                marker: { size: 3, color: 'red' },
+                name: '位移后位置'
+            });
+        }
+        
+        // 应力（简单颜色映射）
+        if (data.stresses && data.stresses.length === elements.length) {
+            // 这里简化：将应力映射到节点颜色（实际应映射到杆件，但为演示）
+            const nodeStress = new Array(nodes.length).fill(0);
+            elements.forEach((elem, idx) => {
+                nodeStress[elem[0]] += data.stresses[idx];
+                nodeStress[elem[1]] += data.stresses[idx];
+            });
+            const maxStress = Math.max(...nodeStress.map(Math.abs), 1e-6);
+            const colors = nodeStress.map(s => s / maxStress);
+            traces.push({
+                type: 'scatter3d',
+                x: nodes.map(n => n[0]),
+                y: nodes.map(n => n[1]),
+                z: nodes.map(n => n[2] || 0),
+                mode: 'markers',
+                marker: {
+                    size: 6,
+                    color: colors,
+                    colorscale: 'RdBu',
+                    showscale: true,
+                    colorbar: { title: '应力 (Pa)' }
+                },
+                name: '应力分布'
+            });
+        }
+        
+        const layout = {
+            title: '平面钢桁架结构可视化',
+            scene: {
+                xaxis: { title: 'X (m)' },
+                yaxis: { title: 'Y (m)' },
+                zaxis: { title: 'Z (m)' }
+            },
+            margin: { l: 0, r: 0, b: 0, t: 40 }
+        };
+        
+        Plotly.newPlot('plot-container', traces, layout);
+    }
+    
+    document.addEventListener('DOMContentLoaded', loadModelData);
+</script>
+{% endblock %}

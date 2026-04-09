@@ -1,0 +1,31 @@
+{
+  "analysis_id": "e2a0b46a-6e89-4c1e-8089-5e1f3a86377d",
+  "user_id": 1,
+  "model_id": 3,
+  "status": "completed",
+  "started_at": "2026-03-31T12:47:32.076972",
+  "completed_at": "2026-03-31T12:47:32.076984",
+  "results": {
+    "status": "completed",
+    "analysis_time": 24.6,
+    "modal_analysis": [
+      {
+        "mode": 1,
+        "frequency": 7.79,
+        "displacement": 0.433
+      },
+      {
+        "mode": 2,
+        "frequency": 26.18,
+        "displacement": 0.157
+      },
+      {
+        "mode": 3,
+        "frequency": 42.23,
+        "displacement": 0.214
+      }
+    ],
+    "is_mock_data": true,
+    "timestamp": "2026-03-31T12:47:32.075832"
+  }
+}

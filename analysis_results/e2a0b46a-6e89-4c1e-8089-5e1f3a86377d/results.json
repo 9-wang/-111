@@ -1,0 +1,23 @@
+{
+  "status": "completed",
+  "analysis_time": 24.6,
+  "modal_analysis": [
+    {
+      "mode": 1,
+      "frequency": 7.79,
+      "displacement": 0.433
+    },
+    {
+      "mode": 2,
+      "frequency": 26.18,
+      "displacement": 0.157
+    },
+    {
+      "mode": 3,
+      "frequency": 42.23,
+      "displacement": 0.214
+    }
+  ],
+  "is_mock_data": true,
+  "timestamp": "2026-03-31T12:47:32.075832"
+}

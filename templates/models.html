@@ -1,0 +1,110 @@
+{% extends "base.html" %}{% block title %}模型列表 - 建筑结构受力分析{% endblock %}{% block content %}
+<div class="container">
+  <h1>建筑模型管理</h1>
+  <p>上传、查看和管理您的建筑模型</p>
+  
+  <div class="content">
+    <form action="/models" method="post" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="model_file">选择模型文件</label>
+        <input type="file" id="model_file" name="model_file" class="form-control">
+      </div>
+      
+      <div class="form-group">
+        <label for="model_name">模型名称</label>
+        <input type="text" id="model_name" name="model_name" class="form-control" placeholder="例如：三角形桁架模型">
+      </div>
+      
+      <div class="form-group">
+        <label for="model_description">模型描述</label>
+        <textarea id="model_description" name="model_description" class="form-control" rows="3" placeholder="简要描述模型用途和特点"></textarea>
+      </div>
+      
+      <button type="submit" class="btn">上传模型</button>
+    </form>
+    
+    <div class="search-bar" style="margin-top: 20px;">
+      <form action="/models" method="get">
+        <input type="text" name="search" placeholder="搜索模型名称或描述" class="form-control" value="{{ search_term }}">
+        <button type="submit" class="btn" style="margin-top: 10px;">搜索</button>
+      </form>
+    </div>
+  </div>
+  
+  {% if models %}
+  <div class="content">
+    <h2>我的模型</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>模型</th>
+          <th>名称</th>
+          <th>描述</th>
+          <th>上传时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for model in models %}
+        <tr>
+          <td><img src="https://picsum.photos/seed/model{{ model[0] }}/100/100" class="model-thumbnail"></td>
+          <td>{{ model[2] }}</td> <!-- model_name -->
+          <td>{{ model[3][:100] }}{% if model[3]|length > 100 %}...{% endif %}</td> <!-- model_description -->
+          <td>{{ model[10][:10] }}</td> <!-- created_at -->
+          <td>
+            <a href="/view_3d_model/{{ model[0] }}" class="btn">查看</a>
+            <a href="/download_model/{{ model[0] }}" class="btn btn-secondary">下载</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="content">
+    <p>暂无模型。请上传或生成您的第一个建筑模型。</p>
+    <a href="/parametric_modeling" class="btn">创建新模型</a>
+  </div>
+  {% endif %}
+  
+  {% if pagination and pagination.pages > 0 %}
+  <div class="pagination">
+    <p>显示 {{ (pagination.page - 1) * pagination.per_page + 1 }} 到 {{ pagination.page * pagination.per_page if pagination.page * pagination.per_page < pagination.total else pagination.total }} 条，共 {{ pagination.total }} 条记录</p>
+    <div>
+      {% if pagination.page > 1 %}
+      <a href="?page={{ pagination.page - 1 }}{% if search_term %}&search={{ search_term }}{% endif %}" class="btn">上一页</a>
+      {% else %}
+      <span class="btn" style="background-color: #ccc; cursor: not-allowed;">上一页</span>
+      {% endif %}
+      
+      {% set start_page = 1 if pagination.page - 2 < 1 else pagination.page - 2 %}
+      {% set end_page = pagination.pages if start_page + 4 > pagination.pages else start_page + 4 %}
+      
+      {% if start_page > 1 %}
+      <a href="?page=1{% if search_term %}&search={{ search_term }}{% endif %}" class="btn">1</a>
+      {% if start_page > 2 %}...{% endif %}
+      {% endif %}
+      
+      {% for page_num in range(start_page, end_page + 1) %}
+      {% if page_num == pagination.page %}
+      <span class="btn" style="background-color: #3498db; color: white;">{{ page_num }}</span>
+      {% else %}
+      <a href="?page={{ page_num }}{% if search_term %}&search={{ search_term }}{% endif %}" class="btn">{{ page_num }}</a>
+      {% endif %}
+      {% endfor %}
+      
+      {% if end_page < pagination.pages %}
+      {% if end_page < pagination.pages - 1 %}...{% endif %}
+      <a href="?page={{ pagination.pages }}{% if search_term %}&search={{ search_term }}{% endif %}" class="btn">{{ pagination.pages }}</a>
+      {% endif %}
+      
+      {% if pagination.page < pagination.pages %}
+      <a href="?page={{ pagination.page + 1 }}{% if search_term %}&search={{ search_term }}{% endif %}" class="btn">下一页</a>
+      {% else %}
+      <span class="btn" style="background-color: #ccc; cursor: not-allowed;">下一页</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
